@@ -3,8 +3,8 @@ param([string]$Dest)
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$Versjon = '44.7.2'
-$Sha256 = '10A89447EF64AC5CB9F782AF48FFD83734A40AE91681259D1048CA3C9E6C5DA4'
+$Versjon = '44.10.2'
+$Sha256 = '7AF18E85A1537B832924AE3B0E5146602F2F4F4B0C77C74E4AE0DC251CA338F9'
 $Url = "https://github.com/electron/electron/releases/download/v$Versjon/electron-v$Versjon-win32-x64.zip"
 $Zip = Join-Path $env:TEMP "strom-electron-$Versjon.zip"
 try {
@@ -29,3 +29,5 @@ try {
   Write-Output "Feil: $($_.Exception.Message)"
   exit 1
 }
+
+
