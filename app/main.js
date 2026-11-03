@@ -5,6 +5,7 @@ const {
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { pathToFileURL } = require('url');
 const vm = require('vm');
 const lib = require('./lib');
 const han = require('./han');
@@ -14,6 +15,7 @@ let VERSION = '2.7.0';
 try { VERSION = require('../package.json').version || VERSION; } catch (_) { /* behold */ }
 const APP_DIR = __dirname;                       // programfilene
 const ROOT = path.resolve(__dirname, '..');      // app-roten (package.json, strom.ico)
+const UI_URL = pathToFileURL(path.join(APP_DIR, 'ui', 'index.html')).href;
 // Installert via Setup.exe: koden ligger i <installasjonsmappe>\resources\app, data i AppData.
 const INSTALLED = path.basename(ROOT) === 'app' && path.basename(path.dirname(ROOT)) === 'resources';
 app.setName('Strøm');
@@ -78,23 +80,35 @@ let hanPending = [];          // funnet, men krever passord
 let lastHanHours = 0;
 let lastAutoScan = 0;
 const hanWarned = new Set();
+let hanPasswordInMemory = null;
 
 function hanAuth() {
   const h = cfg.han;
   if (!h || !h.bruker) return null;
   let passord = '';
   try {
-    passord = h.passord_kryptert && safeStorage.isEncryptionAvailable()
-      ? safeStorage.decryptString(Buffer.from(h.passord_kryptert, 'base64')) : (h.passord || '');
+    if (h.passord_kryptert && safeStorage.isEncryptionAvailable()) {
+      passord = safeStorage.decryptString(Buffer.from(h.passord_kryptert, 'base64'));
+    } else if (hanPasswordInMemory && hanPasswordInMemory.bruker === h.bruker) {
+      passord = hanPasswordInMemory.passord;
+    }
   } catch (_) { passord = ''; }
   return { bruker: h.bruker, passord };
 }
 function setHanAuth(h, auth) {
+  hanPasswordInMemory = null;
   delete h.passord; delete h.passord_kryptert; delete h.bruker;
   if (!auth || !auth.bruker) return;
   h.bruker = auth.bruker;
   if (safeStorage.isEncryptionAvailable()) h.passord_kryptert = safeStorage.encryptString(auth.passord || '').toString('base64');
-  else h.passord = auth.passord || '';
+  else hanPasswordInMemory = { bruker: h.bruker, passord: auth.passord || '' };
+}
+// Eldre utgaver kunne lagre passord i klartekst. Fjern feltet ved oppstart;
+// behold det bare i minnet dersom Electron ikke tilbyr kryptert lagring.
+if (cfg.han && typeof cfg.han.passord === 'string') {
+  const oldAuth = { bruker: cfg.han.bruker, passord: cfg.han.passord };
+  setHanAuth(cfg.han, oldAuth);
+  lib.saveConfig(CONFIG_PATH, cfg);
 }
 function saveHanHours() {
   // behold 70 dager
@@ -307,6 +321,9 @@ function createWindow() {
   win = new BrowserWindow(opts);
   win.setMenu(null);
   win.loadFile(path.join(APP_DIR, 'ui', 'index.html'));
+  win.webContents.on('will-navigate', (event, url) => {
+    if (url !== UI_URL) event.preventDefault();
+  });
   win.once('ready-to-show', () => {
     if (b.maximized) win.maximize();
     if (!process.argv.includes('--hidden')) win.show();
@@ -342,8 +359,15 @@ function createWindow() {
   });
   win.on('closed', () => { win = null; });
 
-  // Lenker åpnes i nettleseren
-  win.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
+  // Bare HTTPS-lenker kan åpne nettleseren; avvis farlige schemes fra eksterne data.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const target = new URL(url);
+      if (target.protocol === 'https:') shell.openExternal(target.href).catch((e) => log(`Ekstern lenke: ${e.message}`));
+      else log(`Blokkerte ekstern lenke med scheme ${target.protocol}`);
+    } catch (e) { log(`Blokkerte ugyldig ekstern lenke: ${e.message}`); }
+    return { action: 'deny' };
+  });
 }
 
 function showWindow() {
@@ -808,14 +832,32 @@ async function checkUpdates(manual = false) {
 }
 
 // ---------------------------------------------------------------------------
-// IPC fra vinduet
+// IPC fra vinduet: avvis meldinger fra rammer eller vinduer utenfor appens lokale UI.
 // ---------------------------------------------------------------------------
-ipcMain.on('refresh', () => refresh(true));
-ipcMain.on('set-ordning', (_e, o) => setOrdning(['norgespris', 'fastpris'].includes(o) ? o : 'stromstotte'));
-ipcMain.on('open-forbruk', () => openPath(FORBRUK_DIR));
-ipcMain.on('open-config', () => openPath(CONFIG_PATH));
-ipcMain.on('open-elhub', () => shell.openExternal('https://elhub.no'));
-ipcMain.handle('setup-data', () => ({
+function trustedUiSender(event) {
+  return !!win && !win.isDestroyed()
+    && event.sender === win.webContents
+    && event.senderFrame === win.webContents.mainFrame
+    && event.senderFrame?.url === UI_URL;
+}
+function uiOn(channel, handler) {
+  ipcMain.on(channel, (event, ...args) => {
+    if (!trustedUiSender(event)) { log(`Avviste IPC fra ukjent avsender: ${channel}`); return; }
+    handler(event, ...args);
+  });
+}
+function uiHandle(channel, handler) {
+  ipcMain.handle(channel, (event, ...args) => {
+    if (!trustedUiSender(event)) throw new Error(`Unauthorized IPC sender for ${channel}`);
+    return handler(event, ...args);
+  });
+}
+uiOn('refresh', () => refresh(true));
+uiOn('set-ordning', (_e, o) => setOrdning(['norgespris', 'fastpris'].includes(o) ? o : 'stromstotte'));
+uiOn('open-forbruk', () => openPath(FORBRUK_DIR));
+uiOn('open-config', () => openPath(CONFIG_PATH));
+uiOn('open-elhub', () => shell.openExternal('https://elhub.no'));
+uiHandle('setup-data', () => ({
   selskaper: selskaper.map((x) => ({ id: x.id, navn: x.navn, soner: x.soner, fylker: x.fylker, kunder: x.kunder, sist_oppdatert: x.sist_oppdatert, kilde: (x.kilder || [])[0] || '' })),
   cfg: {
     oppsett_ferdig: !!cfg.oppsett_ferdig, prissone: cfg.prissone, nettselskap_id: cfg.nettselskap_id, avgiftssone: cfg.avgiftssone,
@@ -824,12 +866,12 @@ ipcMain.handle('setup-data', () => ({
     egen_kapasitet_kr: cfg.egen_kapasitet_kr,
   },
 }));
-ipcMain.handle('tariff-summary', (_e, id, avgiftssone) => {
+uiHandle('tariff-summary', (_e, id, avgiftssone) => {
   const s = selskaper.find((x) => x.id === id);
   if (!s) return null;
   return lib.tariffSummary({ ...cfg, avgiftssone }, s, lib.osloParts(Date.now()).date);
 });
-ipcMain.on('save-setup', (_e, v) => {
+uiOn('save-setup', (_e, v) => {
   const num = (x, d) => (Number.isFinite(Number(x)) ? Number(x) : d);
   if (['NO1', 'NO2', 'NO3', 'NO4', 'NO5'].includes(v.prissone)) cfg.prissone = v.prissone;
   if (v.nettselskap_id === 'egen' || selskaper.some((x) => x.id === v.nettselskap_id)) cfg.nettselskap_id = v.nettselskap_id;
@@ -851,7 +893,7 @@ ipcMain.on('save-setup', (_e, v) => {
   updateTariffFromGithub(true);
   refresh(true);
 });
-ipcMain.handle('han-scan', async () => {
+uiHandle('han-scan', async () => {
   if (hanScanning) return { feil: 'Søker allerede …' };
   hanScanning = true; sendLive();
   try {
@@ -862,23 +904,24 @@ ipcMain.handle('han-scan', async () => {
     return { feil: e.message };
   } finally { hanScanning = false; sendLive(); }
 });
-ipcMain.handle('han-probe', async (_e, host, auth) => {
+uiHandle('han-probe', async (_e, host, auth) => {
   const h = String(host || '').trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
   if (!/^[a-z0-9.-]+$/i.test(h)) return { feil: 'Ugyldig adresse' };
   const dev = await han.probeHost(h, auth);
   return dev ? { enheter: [dev] } : { feil: `Fant ingen HAN-leser på ${h}` };
 });
-ipcMain.handle('han-connect', async (_e, dev, auth) => {
+uiHandle('han-connect', async (_e, dev, auth) => {
   try { return { ok: true, han: await connectHan(dev, auth) }; } catch (e) { return { feil: e.message, auth: e.code === 'AUTH' }; }
 });
-ipcMain.on('han-disconnect', () => {
+uiOn('han-disconnect', () => {
   log('Koblet fra HAN-leser');
+  hanPasswordInMemory = null;
   cfg.han = null; cfg.han_auto_sok = false; hanLive = null; hanErr = null;
   persistConfig(); sendLive();
   if (tray) tray.setContextMenu(buildTrayMenu());
 });
-ipcMain.on('han-live-request', () => sendLive());
-ipcMain.on('menu', () => {
+uiOn('han-live-request', () => sendLive());
+uiOn('menu', () => {
   const m = buildTrayMenu();
   if (win) m.popup({ window: win });
 });
@@ -914,3 +957,5 @@ app.on('before-quit', () => { quitting = true; });
 app.on('window-all-closed', () => {
   if (!cfg.lukk_til_systemstatusfelt || !tray) app.quit();
 });
+
+
