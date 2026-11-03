@@ -3,15 +3,17 @@
   "productName": "Strøm",
   "version": "2.8.0",
   "description": "Strømpris, forbruk og kostnad på skrivebordet",
+  "author": "Robin Salte / Salte Productions",
   "main": "app/main.js",
   "private": true,
   "scripts": {
     "start": "electron ."
   },
   "devDependencies": {
-    "electron": "44.7.2"
+    "electron": "44.10.2"
   },
   "dependencies": {
     "js-yaml": "4.1.0"
   }
 }
+
