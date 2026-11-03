@@ -1,0 +1,8 @@
+node_modules/
+cache/
+forbruk/
+config.json
+widget.log
+release/
+*.pem
+*.exe

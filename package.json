@@ -1,0 +1,17 @@
+{
+  "name": "strom",
+  "productName": "Strøm",
+  "version": "2.7.0",
+  "description": "Strømpris, forbruk og kostnad på skrivebordet",
+  "main": "app/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "44.7.2"
+  },
+  "dependencies": {
+    "js-yaml": "4.1.0"
+  }
+}

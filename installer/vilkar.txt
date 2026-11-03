@@ -1,0 +1,20 @@
+﻿STRØM – vilkår og informasjon
+
+Strøm viser strømpris, nettleie, forbruk og hva strømmen koster. Programmet er gratis å bruke og dele.
+
+Viktig å vite
+• Prisene er beregninger og kan avvike noe fra fakturaen. Fakturaen fra strømleverandøren og nettselskapet gjelder alltid.
+• Programmet kjører på din PC og lagrer innstillinger og forbruksdata lokalt i %APPDATA%\Strom. Ingen personopplysninger sendes til utvikleren.
+
+Hva programmet henter fra internett
+• Spotpriser fra Nord Pool (reserve: hvakosterstrommen.no).
+• Nettleie fra fri-nettleie (kraftsystemet.no), lisensiert CC BY 4.0.
+• Under installasjonen lastes kjøremiljøet Electron (MIT-lisens) ned fra Electrons offisielle side på GitHub. Filen kontrolleres med SHA-256.
+
+HAN-leser
+Hvis du har en HAN-leser på strømmåleren (f.eks. AmsLeser Pow-K), leter programmet etter den på hjemmenettet ditt og leser forbruket direkte fra den. Dataene blir på ditt eget nettverk. Søket kan slås av i innstillingsfilen (han_auto_sok).
+
+Ansvar
+Programmet leveres som det er, uten garantier. Utvikleren er ikke ansvarlig for beslutninger tatt på grunnlag av tallene i programmet.
+
+Ved å trykke «Jeg godtar» bekrefter du at du har lest dette.

@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:">
+<title>Strøm</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+
+  <section class="now">
+    <div class="now-top">
+      <span class="eyebrow" id="now-when">Strømpris nå</span>
+      <div class="actions">
+        <button class="icon-btn" id="btn-refresh" title="Oppdater nå" aria-label="Oppdater">
+          <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-menu" title="Meny" aria-label="Meny">
+          <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="price-row">
+      <span class="price" id="now-price">–</span>
+      <span class="unit">kr/kWh</span>
+      <span class="badge" id="now-badge"></span>
+    </div>
+    <div class="breakdown" id="now-breakdown">Henter priser …</div>
+  </section>
+
+  <section class="next" id="next"></section>
+
+  <section class="chart-card">
+    <div class="card-head">
+      <div class="tabs" role="tablist">
+        <button class="tab active" id="tab-today" role="tab">I dag</button>
+        <button class="tab" id="tab-tomorrow" role="tab">I morgen</button>
+      </div>
+      <span class="muted small" id="tomorrow-hint"></span>
+    </div>
+    <div class="chart-wrap" id="chart-wrap">
+      <canvas id="chart"></canvas>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+    <div class="day-summary" id="day-summary"></div>
+    <div class="cheap" id="cheap"></div>
+  </section>
+
+  <section class="usage" id="usage">
+    <div class="live" id="live" hidden>
+      <div class="live-main">
+        <span class="live-dot"></span>
+        <span class="live-kw" id="live-kw">–</span>
+        <span class="label">nå</span>
+      </div>
+      <div class="live-side">
+        <span class="label" id="live-src">Live fra HAN-leser</span>
+        <span class="live-v"><span class="label">Timen</span> <b id="live-h">–</b> <span class="label">· I dag</span> <b id="live-d">–</b></span>
+        <span class="label live-err" id="live-err"></span>
+      </div>
+    </div>
+    <div class="card-head">
+      <h2 id="month-title">Forbruk</h2>
+      <span class="muted small" id="month-sub"></span>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="label">Forbruk</span><span class="value" id="m-kwh">–</span></div>
+      <div class="stat"><span class="label">Kostnad hittil</span><span class="value" id="m-kr">–</span></div>
+      <div class="stat accent"><span class="label">Estimat mnd</span><span class="value" id="m-est">–</span></div>
+    </div>
+
+    <div class="cap" id="cap" hidden>
+      <div class="cap-head"><span class="label">Kapasitetstrinn</span><span id="cap-text"></span></div>
+      <div class="cap-bar"><div class="cap-fill" id="cap-fill"></div></div>
+      <p class="cap-hint" id="cap-hint"></p>
+    </div>
+
+    <div class="yday" id="yday" hidden>
+      <div class="cap-head"><span class="label" id="yday-title">I går</span><span id="yday-text"></span></div>
+      <canvas id="ychart"></canvas>
+    </div>
+
+    <ul class="facts" id="facts"></ul>
+
+    <div class="empty" id="empty" hidden>
+      <p>Last ned forbruket ditt fra Elhub, så fylles dette ut automatisk. Filen hentes fra Nedlastinger av seg selv.</p>
+      <div class="btns">
+        <button class="btn primary" id="btn-elhub">Åpne elhub.no</button>
+        <button class="btn" id="btn-folder">Forbruksmappe</button>
+        <button class="btn" id="btn-han">Finn HAN-leser</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="status" id="status"></footer>
+</main>
+<div id="setup" class="setup" hidden>
+  <div class="setup-inner">
+    <div class="setup-head">
+      <div class="logo">⚡</div>
+      <div>
+        <h1>Sett opp Strøm</h1>
+        <p class="muted small" id="setup-stepinfo">Steg 1 av 3</p>
+      </div>
+    </div>
+    <div class="steps"><span class="dot" data-s="1"></span><span class="dot" data-s="2"></span><span class="dot" data-s="3"></span></div>
+
+    <section class="step" data-step="1">
+      <h2>Hvor bor du?</h2>
+      <p class="muted small lead">Strømprisen er forskjellig i de fem prisområdene. Usikker? Prisområdet står på strømregningen.</p>
+      <div class="zones" id="zones"></div>
+    </section>
+
+    <section class="step" data-step="2" hidden>
+      <h2>Hvem er nettselskapet ditt?</h2>
+      <p class="muted small lead">Nettselskapet eier strømnettet der du bor, og bestemmer nettleien. Det står på strømregningen eller på Min side hos strømleverandøren.</p>
+      <input class="search" id="ns-search" type="search" placeholder="Søk etter nettselskap …" autocomplete="off">
+      <div class="ns-list" id="ns-list"></div>
+      <label class="check"><input type="checkbox" id="ns-all"> Vis nettselskaper i alle prisområder</label>
+      <div class="preview" id="ns-preview" hidden></div>
+      <div class="egen" id="ns-egen" hidden>
+        <p class="muted small">Finn prisene på nettselskapets nettside. Bruk tall inkl. mva og avgifter.</p>
+        <div class="grid3">
+          <label>Energiledd dag<span class="field"><input type="number" step="0.01" id="egen-dag"><em>øre/kWh</em></span></label>
+          <label>Natt og helg<span class="field"><input type="number" step="0.01" id="egen-natt"><em>øre/kWh</em></span></label>
+          <label>Kapasitetsledd<span class="field"><input type="number" step="1" id="egen-kap"><em>kr/mnd</em></span></label>
+        </div>
+      </div>
+      <label class="select-row" id="avg-row">Avgifter der du bor
+        <select id="avgiftssone">
+          <option value="sor">Sør for Nordland – alle avgifter</option>
+          <option value="nord">Nordland og Troms – uten mva</option>
+          <option value="tiltak">Tiltakssonen (Finnmark/Nord-Troms) – uten mva og elavgift</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="step" data-step="3" hidden>
+      <h2>Hvilken strømavtale har dere?</h2>
+      <div class="choices" id="ordning">
+        <button class="choice" data-v="stromstotte"><b>Spotpris</b><span>Pris time for time. Staten dekker 90 % over 96 øre (strømstøtte).</span></button>
+        <button class="choice" data-v="norgespris"><b>Norgespris</b><span>Fast 50 øre/kWh for strømmen. Meldes på hos Elhub.</span></button>
+      </div>
+      <div id="spot-fields">
+        <p class="label sub">Strømleverandør</p>
+        <div class="chips" id="lev-chips">
+          <button class="pill" data-lev="Vibb" data-p="0" data-f="0">Vibb</button>
+          <button class="pill" data-lev="Vibb+" data-p="0" data-f="39">Vibb med Vibb+</button>
+          <button class="pill" data-lev="Annen">Annen leverandør</button>
+        </div>
+        <div class="grid3">
+          <label>Leverandør<span class="field"><input type="text" id="lev-navn" maxlength="60"></span></label>
+          <label>Påslag<span class="field"><input type="number" step="0.01" id="lev-paaslag"><em>øre/kWh</em></span></label>
+          <label>Månedsbeløp<span class="field"><input type="number" step="1" id="lev-fast"><em>kr/mnd</em></span></label>
+        </div>
+        <p class="muted small">Påslag og månedsbeløp står i avtalen din (inkl. mva). Vibb har 0 påslag og 0 kr i måneden.</p>
+      </div>
+    </section>
+
+    <div class="setup-nav">
+      <button class="btn" id="setup-back">Tilbake</button>
+      <button class="btn primary" id="setup-next">Neste</button>
+    </div>
+    <p class="credit muted small">Nettleie fra <a href="https://kraftsystemet.no/fri-nettleie/" target="_blank">fri-nettleie</a> (CC BY 4.0) · spotpriser fra hvakosterstrommen.no</p>
+  </div>
+</div>
+<div class="modal" id="han-modal" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>HAN-leser</h2>
+      <button class="icon-btn" id="han-close" aria-label="Lukk"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <p class="muted small lead">En HAN-leser sitter i strømmåleren og sender forbruket hvert par sekunder. Da slipper du å laste ned fra Elhub. Appen finner lesere på hjemmenettet av seg selv.</p>
+
+    <div id="han-connected" hidden>
+      <div class="han-dev sel"><b id="han-c-navn"></b><span class="muted small" id="han-c-info"></span></div>
+      <div class="btns"><button class="btn" id="han-disconnect">Koble fra</button></div>
+    </div>
+
+    <div id="han-search">
+      <button class="btn primary wide" id="han-scan">Søk etter HAN-leser</button>
+      <div class="progress" id="han-progress" hidden><div class="progress-fill" id="han-progress-fill"></div></div>
+      <p class="muted small" id="han-status"></p>
+      <div class="han-list" id="han-list"></div>
+      <div class="han-auth" id="han-auth" hidden>
+        <p class="small">Leseren er passordbeskyttet. Bruk innloggingen fra leserens egen nettside.</p>
+        <div class="grid2">
+          <label>Brukernavn<span class="field"><input type="text" id="han-user" autocomplete="off"></span></label>
+          <label>Passord<span class="field"><input type="password" id="han-pass" autocomplete="off"></span></label>
+        </div>
+        <button class="btn primary" id="han-auth-go">Koble til</button>
+      </div>
+      <details class="han-manual">
+        <summary class="small muted">Finner den ikke? Skriv inn adressen selv</summary>
+        <div class="manual-row">
+          <span class="field"><input type="text" id="han-ip" placeholder="f.eks. 192.168.1.50 eller ams-1a2b3c.local"></span>
+          <button class="btn" id="han-ip-go">Prøv</button>
+        </div>
+      </details>
+    </div>
+
+    <div class="han-help">
+      <p class="label">Har du ikke HAN-leser ennå?</p>
+      <ol class="small muted">
+        <li>Be nettselskapet åpne HAN-porten på måleren (gratis).</li>
+        <li>Kjøp en leser som passer måleren, f.eks. Pow-K for Kamstrup eller Pow-U for Aidon/Kaifa, fra <a href="https://amsleser.no" target="_blank">amsleser.no</a>.</li>
+        <li>Koble den til wifi. Appen finner den av seg selv.</li>
+      </ol>
+      <p class="small muted">Støttet nå: lesere med amsreader-programvare (AmsLeser Pow-K, Pow-U, Pow-P1 m.fl.).</p>
+    </div>
+  </div>
+</div>
+<script src="han.js"></script>
+<script src="setup.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
