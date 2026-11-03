@@ -6,6 +6,8 @@ Strøm is a small Windows desktop app for Norwegian households. It shows the rea
 
 **[⬇ Download Strøm for Windows](https://github.com/doxybox/strom/raw/main/last-ned/Strom-Setup-2.7.0.exe)**
 
+> The published installer is still version 2.7.0; the installed app updates itself to 2.8.1.
+
 > The app itself is in Norwegian.
 
 ## Features
@@ -23,8 +25,8 @@ Strøm is a small Windows desktop app for Norwegian households. It shows the rea
 
 ## Install
 
-1. Click **[Download Strøm for Windows](https://github.com/doxybox/strom/raw/main/last-ned/Strom-Setup-2.7.0.exe)**.
-2. Open `Strom-Setup-2.7.0.exe`.
+1. Click **[Download Strøm for Windows](https://github.com/doxybox/strom/raw/main/last-ned/Strom-Setup-2.7.0.exe)**. This is the currently published 2.7.0 installer.
+2. Open `Strom-Setup-2.7.0.exe`; after installation, the app updates to version 2.8.1.
 3. If Windows shows *"Windows protected your PC"*, click **More info** → **Run anyway**. (The app isn't code-signed yet.)
 4. Follow the installer and click **Install**. An internet connection is needed; it takes a couple of minutes.
 5. On first launch, choose your **price area**, **grid company** and **electricity contract**. That's it.
@@ -46,3 +48,4 @@ A HAN reader plugs into the HAN port on your smart meter and reports your usage 
 - The spot price is the same for every supplier in your price area; you enter your own markup and monthly fee.
 - Prices beyond tomorrow are estimates based on the last two weeks.
 - Grid tariffs from [fri-nettleie](https://kraftsystemet.no/fri-nettleie/) (CC BY 4.0).
+
