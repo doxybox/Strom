@@ -25,18 +25,6 @@ Krever Windows 10/11 (64-bit). Ingen administratortilgang.
 
 Støttet i dag: lesere med [amsreader-firmware](https://github.com/UtilitechAS/amsreader-firmware) (AmsLeser Pow-K, Pow-K+, Pow-U, Pow-P1 og hjemmelagde ESP-lesere). Nye lesertyper legges til som en «driver» i [`app/han.js`](app/han.js).
 
-## Oppdateringer
-
-Mappen [`oppdateringer/`](oppdateringer/) inneholder `latest.json` (signert med ed25519) og `strom-app-x.y.z.json.gz` (programfilene). Installerte apper sjekker den hver time og godtar bare pakker signert med nøkkelen som er bygget inn i [`app/updater.js`](app/updater.js).
-
-Ny versjon: øk `version` i `package.json`, og kjør
-
-```
-node tools/publiser.js <privat-nøkkel.pem> oppdateringer/
-```
-
-Eldre `strom-app-*.json.gz` kan slettes fra mappen.
-
 ## Kilder og lisenser
 
 - Spotpriser: Nord Pool (reserve: hvakosterstrommen.no)
