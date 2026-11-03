@@ -1,11 +1,11 @@
-; Strøm – installasjonsprogram (NSIS 3, Modern UI 2)
+﻿; Strøm – installasjonsprogram (NSIS 3, Modern UI 2)
 Unicode true
 ManifestDPIAware true
 SetCompressor /SOLID lzma
 
 !define APPNAME "Strøm"
 !define APPID "Strom"
-!define VERSION "2.7.0"
+!define VERSION "2.8.1"
 !define PUBLISHER "Robin Salte / Salte Productions"
 !define EXE "Strom.exe"
 !define ELECTRON "44.10.2"
@@ -194,5 +194,4 @@ Function .onInit
     Abort
   ${EndIf}
 FunctionEnd
-
 
