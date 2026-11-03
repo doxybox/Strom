@@ -370,12 +370,16 @@ function buildTrayMenu() {
     { label: 'Endre sone, nettselskap og avtale …', click: () => { showWindow(); if (win) win.webContents.send('show-setup'); } },
     { type: 'separator' },
     {
-      label: 'Spotpris + strømstøtte', type: 'radio', checked: cfg.ordning !== 'norgespris',
+      label: 'Spotpris + strømstøtte', type: 'radio', checked: cfg.ordning === 'stromstotte' || !cfg.ordning,
       click: () => setOrdning('stromstotte'),
     },
     {
       label: 'Norgespris', type: 'radio', checked: cfg.ordning === 'norgespris',
       click: () => setOrdning('norgespris'),
+    },
+    {
+      label: 'Fastpris', type: 'radio', checked: cfg.ordning === 'fastpris',
+      click: () => setOrdning('fastpris'),
     },
     { type: 'separator' },
     {
@@ -566,7 +570,8 @@ async function refresh(force = false) {
       ordning: cfg.ordning,
       nettselskap: cfg.nettselskap,
       quarters: todayEntries.concat(tomorrowEntries).map((x) => ({ s: x.s, e: x.e, ...lib.beregn(cfg, x.s, x.p), altTotal: lib.beregn(altCfg(), x.s, x.p).total })),
-      norgespris: cfg.ordning === 'norgespris',
+      norgespris: cfg.ordning === 'norgespris' || cfg.ordning === 'fastpris', // fast avtale: sammenlign med spot
+      avtaleNavn: cfg.ordning === 'fastpris' ? 'Fastpris' : 'Norgespris',
       mva: lib.mvaFactor(cfg),
       kilde: todayEntries.length && todayEntries.every((x) => x.np) ? 'Nord Pool' : 'hvakosterstrommen.no',
       trinn: cfg.__selskap && cfg.nettselskap_id !== 'egen' ? (lib.tariffSummary(cfg, cfg.__selskap, today) || {}).trinn || [] : [],
@@ -581,8 +586,8 @@ async function refresh(force = false) {
       yesterday,
       todayStats: lib.dayStats(cfg, cons, prices, today) || { kwh: 0, kr: 0 },
       month: lib.monthStats(cfg, cons, prices, y, m, hourly),
-      monthAlt: cfg.ordning === 'norgespris' ? lib.monthStats(altCfg(), cons, prices, y, m, hourly) : null,
-      prevAlt: cfg.ordning === 'norgespris' ? lib.monthStats(altCfg(), cons, prices, py, pm, hourly) : null,
+      monthAlt: cfg.ordning !== 'stromstotte' ? lib.monthStats(altCfg(), cons, prices, y, m, hourly) : null,
+      prevAlt: cfg.ordning !== 'stromstotte' ? lib.monthStats(altCfg(), cons, prices, py, pm, hourly) : null,
       monthName: m,
       prev: lib.monthStats(cfg, cons, prices, py, pm, hourly),
       prevName: pm,
@@ -626,7 +631,7 @@ function updateTray() {
 function afterRefresh() {
   // Varsel når morgendagens priser kommer
   const hasT = state.tomorrowSeries.length > 0;
-  if (hadTomorrow === false && hasT && cfg.varsler !== false && cfg.ordning !== 'norgespris') {
+  if (hadTomorrow === false && hasT && cfg.varsler !== false && cfg.ordning === 'stromstotte') {
     const s = state.tomorrowSeries;
     const avg = s.reduce((a, c) => a + c.total, 0) / s.length;
     const w = lib.cheapestWindow(s, 3);
@@ -638,7 +643,7 @@ function afterRefresh() {
 
 /** Varsler når dagens billigste 3-timersvindu starter (hvis det er merkbart billigere). */
 function checkCheapNotification() {
-  if (!state || !state.todaySeries || cfg.varsler === false || cfg.ordning === 'norgespris') return;
+  if (!state || !state.todaySeries || cfg.varsler === false || cfg.ordning !== 'stromstotte') return;
   const all = state.todaySeries.concat(state.tomorrowSeries || []);
   const now = Date.now();
   const day = state.todaySeries;
@@ -806,7 +811,7 @@ async function checkUpdates(manual = false) {
 // IPC fra vinduet
 // ---------------------------------------------------------------------------
 ipcMain.on('refresh', () => refresh(true));
-ipcMain.on('set-ordning', (_e, o) => setOrdning(o === 'norgespris' ? 'norgespris' : 'stromstotte'));
+ipcMain.on('set-ordning', (_e, o) => setOrdning(['norgespris', 'fastpris'].includes(o) ? o : 'stromstotte'));
 ipcMain.on('open-forbruk', () => openPath(FORBRUK_DIR));
 ipcMain.on('open-config', () => openPath(CONFIG_PATH));
 ipcMain.on('open-elhub', () => shell.openExternal('https://elhub.no'));
@@ -814,7 +819,7 @@ ipcMain.handle('setup-data', () => ({
   selskaper: selskaper.map((x) => ({ id: x.id, navn: x.navn, soner: x.soner, fylker: x.fylker, kunder: x.kunder, sist_oppdatert: x.sist_oppdatert, kilde: (x.kilder || [])[0] || '' })),
   cfg: {
     oppsett_ferdig: !!cfg.oppsett_ferdig, prissone: cfg.prissone, nettselskap_id: cfg.nettselskap_id, avgiftssone: cfg.avgiftssone,
-    ordning: cfg.ordning, stromleverandor: cfg.stromleverandor, kraft_paaslag_ore_inkl_mva: cfg.kraft_paaslag_ore_inkl_mva,
+    ordning: cfg.ordning, stromleverandor: cfg.stromleverandor, fastpris_ore_inkl_mva: cfg.fastpris_ore_inkl_mva, fastpris_stotte: cfg.fastpris_stotte !== false, kraft_paaslag_ore_inkl_mva: cfg.kraft_paaslag_ore_inkl_mva,
     kraft_fast_kr_per_mnd: cfg.kraft_fast_kr_per_mnd, egen_dag_ore: cfg.egen_dag_ore, egen_natt_ore: cfg.egen_natt_ore,
     egen_kapasitet_kr: cfg.egen_kapasitet_kr,
   },
@@ -829,7 +834,8 @@ ipcMain.on('save-setup', (_e, v) => {
   if (['NO1', 'NO2', 'NO3', 'NO4', 'NO5'].includes(v.prissone)) cfg.prissone = v.prissone;
   if (v.nettselskap_id === 'egen' || selskaper.some((x) => x.id === v.nettselskap_id)) cfg.nettselskap_id = v.nettselskap_id;
   if (['sor', 'nord', 'tiltak'].includes(v.avgiftssone)) cfg.avgiftssone = v.avgiftssone;
-  cfg.ordning = v.ordning === 'norgespris' ? 'norgespris' : 'stromstotte';
+  cfg.ordning = ['norgespris', 'fastpris'].includes(v.ordning) ? v.ordning : 'stromstotte';
+  if (cfg.ordning === 'fastpris') { cfg.fastpris_ore_inkl_mva = num(v.fastpris_ore_inkl_mva, cfg.fastpris_ore_inkl_mva); cfg.fastpris_stotte = v.fastpris_stotte !== false; }
   cfg.stromleverandor = String(v.stromleverandor || '').slice(0, 60);
   cfg.kraft_paaslag_ore_inkl_mva = num(v.kraft_paaslag_ore_inkl_mva, 0);
   cfg.kraft_fast_kr_per_mnd = num(v.kraft_fast_kr_per_mnd, 0);

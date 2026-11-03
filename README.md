@@ -6,7 +6,7 @@ Se hva strømmen koster akkurat nå – og hva du faktisk bruker – rett på Wi
 
 ## Hva Strøm gjør
 
-- **Viser strømprisen akkurat nå** – med nettleie, avgifter og strømstøtte inkludert, slik du faktisk betaler den. Har du Norgespris, ser du hva du sparer mot spotpris.
+- **Viser strømprisen akkurat nå** – med nettleie, avgifter og strømstøtte inkludert, slik du faktisk betaler den. Fungerer med spotpris, Norgespris og fastpris – med fast avtale ser du hva du sparer mot spotpris.
 - **Kjenner nettleien din** – velg nettselskapet ditt blant 72 norske nettselskaper, så regnes riktig nettleie for hver time, helg og helligdag.
 - **Pris time for time** – for i dag og i morgen, med fargekoder og de billigste timene fremover, så du vet når det lønner seg å vaske, lade bilen eller kjøre oppvaskmaskinen.
 - **Viser forbruket ditt** – live fra en HAN-leser på strømmåleren, som Strøm finner av seg selv på hjemmenettet. Uten HAN-leser kan du laste ned forbruket fra Elhub.

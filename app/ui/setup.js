@@ -56,6 +56,7 @@
     let ok = true;
     if (step === 1) ok = !!v.prissone;
     if (step === 2) ok = !!v.nettselskap_id;
+    if (step === 3 && v.ordning === 'fastpris') ok = Number($('lev-fastpris').value) > 0;
     $('setup-next').disabled = !ok;
   }
 
@@ -138,11 +139,22 @@
   function renderAgreement() {
     document.querySelectorAll('#ordning .choice').forEach((b) => b.classList.toggle('sel', b.dataset.v === v.ordning));
     $('spot-fields').hidden = v.ordning === 'norgespris';
+    const fp = v.ordning === 'fastpris';
+    $('paaslag-wrap').hidden = fp;
+    $('fastpris-wrap').hidden = !fp;
+    $('lev-chips').hidden = fp;
+    $('lev-fastpris').value = data.cfg.ordning === 'fastpris' || v._fpSatt ? (v.fastpris_ore_inkl_mva ?? '') : '';
+    $('fp-stotte-row').hidden = !fp;
+    $('fp-stotte').checked = v.fastpris_stotte !== false;
+    $('lev-hint').textContent = fp
+      ? 'Skriv inn kraftprisen fra avtalen din (øre/kWh inkl. mva) og eventuelt månedsbeløp. Usikker på strømstøtten? Se etter linjen «Strømstøtte» på fakturaen.'
+      : 'Påslag og månedsbeløp står i avtalen din (inkl. mva). Vibb har 0 påslag og 0 kr i måneden.';
     $('lev-navn').value = v.stromleverandor || '';
     $('lev-paaslag').value = v.kraft_paaslag_ore_inkl_mva ?? 0;
     $('lev-fast').value = v.kraft_fast_kr_per_mnd ?? 0;
     markChip();
     const np = v.avgiftssone === 'sor' ? '50' : '40';
+    validate();
     document.querySelector('#ordning .choice[data-v="norgespris"] span').textContent = `Fast ${np} øre/kWh for strømmen. Meldes på hos Elhub.`;
   }
   function markChip() {
@@ -164,6 +176,7 @@
       v.stromleverandor = $('lev-navn').value.trim();
       v.kraft_paaslag_ore_inkl_mva = Number($('lev-paaslag').value) || 0;
       v.kraft_fast_kr_per_mnd = Number($('lev-fast').value) || 0;
+      if (v.ordning === 'fastpris') { v.fastpris_ore_inkl_mva = Number($('lev-fastpris').value) || v.fastpris_ore_inkl_mva; v.fastpris_stotte = $('fp-stotte').checked; }
     }
   }
 
@@ -182,6 +195,7 @@
     markChip();
   }));
   ['lev-navn', 'lev-paaslag', 'lev-fast'].forEach((id) => $(id).addEventListener('input', markChip));
+  $('lev-fastpris').addEventListener('input', () => { v._fpSatt = true; v.fastpris_ore_inkl_mva = Number($('lev-fastpris').value) || ''; validate(); });
 
   $('setup-next').addEventListener('click', () => {
     collect();

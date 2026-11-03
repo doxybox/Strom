@@ -113,9 +113,10 @@ function renderNow() {
     priceEl.textContent = kr(q.total);
     priceEl.style.color = COLORS.blue;
     badge.className = 'badge blue';
-    badge.textContent = 'Norgespris';
+    badge.textContent = S.avtaleNavn || 'Norgespris';
     const diff = q.altTotal - q.total;
-    let h = `Norgespris <b>${kr(q.kraft)}</b> + nettleie og avgifter <b>${kr(q.nett)}</b><br>`;
+    let h = `${S.avtaleNavn || 'Norgespris'} <b>${kr(q.kraft)}</b> + nettleie og avgifter <b>${kr(q.nett)}</b><br>`;
+    if (q.stotte > 0) h += `<span class="support">Strømstøtte −${kr(q.stotte)} kr/kWh${q.total < 0 ? ' – høyere enn fastprisen, så dere tjener på å bruke strøm nå' : ''}</span><br>`;
     h += diff >= 0
       ? `<span class="support">Med spotpris: ${kr(q.altTotal)} · dere sparer ${kr(diff)} kr/kWh nå</span>`
       : `<span class="warnc">Med spotpris: ${kr(q.altTotal)} · spot er ${kr(-diff)} kr/kWh billigere nå</span>`;
@@ -124,7 +125,7 @@ function renderNow() {
     const hr = (S.todaySeries || []).find((x) => x.t === nowH);
     const lev = String(S.leverandor || '').replace(/\+$/, '').trim();
     const hvor = lev && lev.toLowerCase() !== 'annen' ? `Som i ${lev}-appen` : 'Som i strømselskapets app';
-    if (hr) h += `<br><span class="vibb">${hvor} (kl. ${hh(hr.t)}–${hh(hr.t + HOUR)}): Norgespris ${num(hr.kraft, 2)} øre · spotpris ${num(hr.spot * 100 * (S.mva || 1.25), 2)} øre</span>`;
+    if (hr) h += `<br><span class="vibb">${hvor} (kl. ${hh(hr.t)}–${hh(hr.t + HOUR)}): ${S.avtaleNavn || 'Norgespris'} ${num(hr.kraft, 2)} øre · spotpris ${num(hr.spot * 100 * (S.mva || 1.25), 2)} øre</span>`;
     $('now-breakdown').innerHTML = `${h}<br>Totalpris inkl. nettleie, avgifter og mva`;
     return;
   }
@@ -134,7 +135,7 @@ function renderNow() {
   badge.className = `badge ${lv}`;
   badge.textContent = { green: 'Billig nå', yellow: 'Middels', red: 'Dyrt nå' }[lv];
   $('now-when').textContent = `Strømpris nå · kl. ${hm(q.s)}–${hm(q.e)}`;
-  const label = S.ordning === 'norgespris' ? 'Norgespris' : 'Strøm';
+  const label = S.norgespris ? (S.avtaleNavn || 'Norgespris') : 'Strøm';
   let html = `${label} <b>${kr(q.kraft)}</b> + nettleie og avgifter <b>${kr(q.nett)}</b>`;
   if (q.stotte > 0) html += `<br><span class="support">Strømstøtte −${kr(q.stotte)} kr/kWh</span>`;
   html += '<br>Alt inkl. mva';
@@ -181,7 +182,7 @@ function renderChartHeader() {
     const series = day.series;
     if (series.length && S.norgespris) {
       const altAvg = avgOf(series, 'altTotal'); const avg = avgOf(series, 'total');
-      $('day-summary').innerHTML = `<span class="legend bars"></span>Spot m/støtte ${day.prognose ? '~' : ''}${kr(altAvg)} · <span class="legend line"></span>Norgespris ${kr(avg)} · ${altAvg >= avg ? `sparer ${day.prognose ? '~' : ''}${kr(altAvg - avg)}` : `spot ${kr(avg - altAvg)} lavere`}`;
+      $('day-summary').innerHTML = `<span class="legend bars"></span>Spot m/støtte ${day.prognose ? '~' : ''}${kr(altAvg)} · <span class="legend line"></span>${S.avtaleNavn || 'Norgespris'} ${kr(avg)} · ${altAvg >= avg ? `sparer ${day.prognose ? '~' : ''}${kr(altAvg - avg)}` : `spot ${kr(avg - altAvg)} lavere`}`;
     } else if (series.length) {
       const avg = series.reduce((a, c) => a + c.total, 0) / series.length;
       const mn = series.reduce((a, c) => (c.total < a.total ? c : a));
@@ -196,7 +197,7 @@ function renderChartHeader() {
   const w = cheapestWindow(futureSeries(), 3);
   $('cheap').classList.toggle('neutral', !!(S.norgespris && isFlat(S.todaySeries)));
   if (S.norgespris && isFlat(S.todaySeries)) {
-    $('cheap').textContent = '⚡ Lik pris hele døgnet – unngå at mye går samtidig.';
+    $('cheap').textContent = '⚡ Fast pris hele døgnet – unngå at mye går samtidig.';
   } else if (w) {
     const tomorrow = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Oslo' }).format(w.start) !== S.today;
     $('cheap').textContent = `⚡ Billigste 3 timer fremover: ${tomorrow ? 'i morgen ' : ''}kl. ${hh(w.start)}–${hh(w.end)} · snitt ${kr(w.avg)} kr/kWh`;
@@ -301,7 +302,7 @@ function drawChart() {
     // Norgespris som trappelinje
     ctx.strokeStyle = COLORS.blue; ctx.lineWidth = 2.5; ctx.beginPath();
     series.forEach((x, i) => {
-      const y = top + plotH - (x.total / yMax) * plotH;
+      const y = top + plotH - (Math.max(0, x.total) / yMax) * plotH;
       const x0 = plotX + i * bw; const x1 = x0 + bw;
       if (i === 0) ctx.moveTo(x0, y); else ctx.lineTo(x0, y);
       ctx.lineTo(x1, y);
@@ -363,7 +364,7 @@ function drawWeek() {
     ctx.globalAlpha = 0.85; ctx.strokeStyle = '#eef0f4'; ctx.lineWidth = 1.2;
     const cx = bx + bwi / 2;
     ctx.beginPath(); ctx.moveTo(cx, Y(s.min)); ctx.lineTo(cx, Y(s.max)); ctx.moveTo(cx - 4, Y(s.max)); ctx.lineTo(cx + 4, Y(s.max)); ctx.moveTo(cx - 4, Y(s.min)); ctx.lineTo(cx + 4, Y(s.min)); ctx.stroke();
-    if (np) { ctx.globalAlpha = 1; ctx.strokeStyle = COLORS.blue; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(bx, Y(s.np)); ctx.lineTo(bx + bwi, Y(s.np)); ctx.stroke(); }
+    if (np) { ctx.globalAlpha = 1; ctx.strokeStyle = COLORS.blue; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(bx, Y(Math.max(0, s.np))); ctx.lineTo(bx + bwi, Y(Math.max(0, s.np))); ctx.stroke(); }
     ctx.globalAlpha = 1;
     ctx.fillStyle = s.d.prognose ? COLORS.faint : COLORS.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     const idx = weekDays().indexOf(s.d);
@@ -386,7 +387,7 @@ function onChartMove(e) {
     const p = s.d.prognose ? '~' : '';
     let h2 = `<b>${dagNavn(s.d.date, idx)}</b>${s.d.prognose ? ' <span class="anslag">Anslag</span>' : ''}<br>`;
     h2 += S.norgespris
-      ? `<span style="color:${COLORS.blue}">Norgespris ${kr(s.np)}</span><br>Spot m/støtte snitt ${p}${kr(s.avg)}<br>Laveste ${p}${kr(s.min)} · høyeste ${p}${kr(s.max)}`
+      ? `<span style="color:${COLORS.blue}">${S.avtaleNavn || 'Norgespris'} ${kr(s.np)}</span><br>Spot m/støtte snitt ${p}${kr(s.avg)}<br>Laveste ${p}${kr(s.min)} · høyeste ${p}${kr(s.max)}`
       : `Snitt ${p}${kr(s.avg)} kr/kWh<br>Laveste ${p}${kr(s.min)} · høyeste ${p}${kr(s.max)}`;
     tip.innerHTML = h2; tip.hidden = false;
     const tw1 = tip.offsetWidth;
@@ -397,7 +398,7 @@ function onChartMove(e) {
   const d = chartGeom.series[i];
   if (S.norgespris) {
     const diff = d.altTotal - d.total;
-    tip.innerHTML = `<b>kl. ${hh(d.t)}–${hh(d.t + HOUR)}</b>${chartGeom.prog ? ' <span class="anslag">Anslag</span>' : ''}<br><span style="color:${COLORS.blue}">Norgespris ${kr(d.total)}</span><br>Spotpris m/støtte ${chartGeom.prog ? '~' : ''}${kr(d.altTotal)}<br><span class="${diff >= 0 ? 'green' : 'yellow'}">${diff >= 0 ? 'Sparer' : 'Spot billigere med'} ${kr(Math.abs(diff))}</span>`;
+    tip.innerHTML = `<b>kl. ${hh(d.t)}–${hh(d.t + HOUR)}</b>${chartGeom.prog ? ' <span class="anslag">Anslag</span>' : ''}<br><span style="color:${COLORS.blue}">${S.avtaleNavn || 'Norgespris'} ${kr(d.total)}</span><br>Spotpris m/støtte ${chartGeom.prog ? '~' : ''}${kr(d.altTotal)}<br><span class="${diff >= 0 ? 'green' : 'yellow'}">${diff >= 0 ? 'Sparer' : 'Spot billigere med'} ${kr(Math.abs(diff))}</span>`;
     tip.hidden = false;
     const tw0 = tip.offsetWidth;
     tip.style.left = `${Math.max(0, Math.min(r.width - tw0, chartGeom.plotX + i * chartGeom.bw + chartGeom.bw / 2 - tw0 / 2))}px`;
@@ -405,7 +406,7 @@ function onChartMove(e) {
     return;
   }
   let html = `<b>${chartGeom.prog ? '~' : ''}${kr(d.total)} kr/kWh</b>${chartGeom.prog ? ' <span class="anslag">Anslag</span>' : ''}<br>kl. ${hh(d.t)}–${hh(d.t + HOUR)}<br>`;
-  html += `${S.ordning === 'norgespris' ? 'Norgespris' : 'Strøm'} ${kr(d.kraft)} · nett ${kr(d.nett)}`;
+  html += `${S.norgespris ? (S.avtaleNavn || 'Norgespris') : 'Strøm'} ${kr(d.kraft)} · nett ${kr(d.nett)}`;
   if (d.stotte > 0) html += `<br><span class="green">Støtte −${kr(d.stotte)}</span>`;
   tip.innerHTML = html;
   tip.hidden = false;
@@ -497,7 +498,7 @@ function renderUsage() {
   if (S.norgespris && alt) {
     const spart = (alt.energiKr - orig.energiKr) * (S.month ? hanRatio : 1);
     facts.unshift(spart >= 0
-      ? `<span class="green">Norgespris har spart dere ~${num(spart)} kr ${S.month ? 'hittil' : 'forrige måned'}</span> mot spotpris`
+      ? `<span class="green">${S.avtaleNavn || 'Norgespris'} har spart dere ~${num(spart)} kr ${S.month ? 'hittil' : 'forrige måned'}</span> mot spotpris`
       : `<span class="warn">Spotpris ville vært ~${num(-spart)} kr billigere ${S.month ? 'denne måneden' : 'forrige måned'}</span>`);
 
   }

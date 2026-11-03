@@ -19,7 +19,9 @@ const DEFAULT_CONFIG = {
   avgiftssone: 'sor',
   _avgiftssone_info: "'sor' = alle avgifter, 'nord' = Nordland/Troms uten mva, 'tiltak' = tiltakssonen i Finnmark/Nord-Troms uten mva og elavgift.",
   ordning: 'stromstotte',
-  _ordning_info: "'stromstotte' = spotpris med statlig strømstøtte. 'norgespris' = fast kraftpris (meldes på via minside.elhub.no).",
+  _ordning_info: "'stromstotte' = spotpris med strømstøtte. 'norgespris' = statens faste pris. 'fastpris' = fastprisavtale med strømselskapet (strømstøtte beregnes fortsatt ut fra spotprisen).",
+  fastpris_ore_inkl_mva: 99.0,
+  fastpris_stotte: true,
   stromleverandor: 'Vibb',
   kraft_paaslag_ore_inkl_mva: 0.0,
   kraft_fast_kr_per_mnd: 0.0,
@@ -300,6 +302,10 @@ function beregn(cfg, ms, spotEksKr) {
   if (cfg.ordning === 'norgespris') {
     kraft = cfg.norgespris_ore_eks_mva * mva;
     stotte = 0;
+  } else if (cfg.ordning === 'fastpris') {
+    // Fastprisavtale: fast kraftpris, men strømstøtten beregnes fortsatt av spotprisen i området
+    kraft = Number(cfg.fastpris_ore_inkl_mva) || 0;
+    stotte = cfg.fastpris_stotte === false ? 0 : Math.max(0, spotEksKr * 100 - cfg.stotte_terskel_ore_eks_mva) * cfg.stotte_andel * mva;
   } else {
     const spotEksOre = spotEksKr * 100;
     kraft = spotEksOre * mva + cfg.kraft_paaslag_ore_inkl_mva;

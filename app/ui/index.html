@@ -145,6 +145,7 @@
       <div class="choices" id="ordning">
         <button class="choice" data-v="stromstotte"><b>Spotpris</b><span>Pris time for time. Staten dekker 90 % over 96 øre (strømstøtte).</span></button>
         <button class="choice" data-v="norgespris"><b>Norgespris</b><span>Fast 50 øre/kWh for strømmen. Meldes på hos Elhub.</span></button>
+        <button class="choice" data-v="fastpris"><b>Fastpris</b><span>Fast pris per kWh avtalt med strømselskapet.</span></button>
       </div>
       <div id="spot-fields">
         <p class="label sub">Strømleverandør</p>
@@ -155,10 +156,12 @@
         </div>
         <div class="grid3">
           <label>Leverandør<span class="field"><input type="text" id="lev-navn" maxlength="60"></span></label>
-          <label>Påslag<span class="field"><input type="number" step="0.01" id="lev-paaslag"><em>øre/kWh</em></span></label>
+          <label id="paaslag-wrap">Påslag<span class="field"><input type="number" step="0.01" id="lev-paaslag"><em>øre/kWh</em></span></label>
+          <label id="fastpris-wrap" hidden>Fastpris<span class="field"><input type="number" step="0.01" id="lev-fastpris"><em>øre/kWh</em></span></label>
           <label>Månedsbeløp<span class="field"><input type="number" step="1" id="lev-fast"><em>kr/mnd</em></span></label>
         </div>
-        <p class="muted small">Påslag og månedsbeløp står i avtalen din (inkl. mva). Vibb har 0 påslag og 0 kr i måneden.</p>
+        <label class="check" id="fp-stotte-row" hidden><input type="checkbox" id="fp-stotte" checked> Jeg får strømstøtte på fakturaen (trekkes fra når spotprisen er høy)</label>
+        <p class="muted small" id="lev-hint">Påslag og månedsbeløp står i avtalen din (inkl. mva). Vibb har 0 påslag og 0 kr i måneden.</p>
       </div>
     </section>
 

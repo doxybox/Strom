@@ -311,3 +311,7 @@ select { font: inherit; font-size: 0.85rem; color: var(--fg); background: var(--
 .head-right { display: flex; align-items: center; gap: 0.4rem; }
 .anslag { font-size: 0.68rem; font-weight: 600; color: var(--yellow); background: rgba(233,182,73,.14); border-radius: 999px; padding: 0.1rem 0.45rem; }
 .anslag[hidden] { display: none; }
+.choices { grid-template-columns: repeat(3, 1fr); }
+.grid3 label[hidden], #lev-chips[hidden] { display: none; }
+@media (max-width: 460px) { .choices { grid-template-columns: 1fr; } }
+#fp-stotte-row[hidden] { display: none; }
