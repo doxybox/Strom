@@ -6,3 +6,5 @@ widget.log
 release/
 *.pem
 *.exe
+
+!last-ned/*.exe

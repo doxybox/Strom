@@ -2,7 +2,7 @@
 
 Strømpris, nettleie, forbruk og kostnad på Windows-skrivebordet.
 
-**[Last ned siste versjon →](https://github.com/doxybox/strom/releases/latest)** (`Strom-Setup-x.y.z.exe`)
+**[⬇ Last ned Strøm 2.7.0 for Windows](https://github.com/doxybox/strom/raw/main/last-ned/Strom-Setup-2.7.0.exe)** (`Strom-Setup-2.7.0.exe`, 0,6 MB)
 
 ## Hva den gjør
 
@@ -15,7 +15,7 @@ Strømpris, nettleie, forbruk og kostnad på Windows-skrivebordet.
 
 ## Installere
 
-1. Last ned `Strom-Setup-x.y.z.exe` fra [Releases](https://github.com/doxybox/strom/releases/latest)
+1. Last ned `Strom-Setup-2.7.0.exe` fra lenken øverst (eller mappen [`last-ned/`](last-ned/))
 2. Windows kan si «Windows beskyttet PC-en din» (programmet er ikke kodesignert): **Mer informasjon → Kjør likevel**
 3. Følg veiviseren. Kjøremiljøet (Electron, ~150 MB) lastes ned under installasjonen og kontrolleres med SHA-256.
 
@@ -27,11 +27,15 @@ Støttet i dag: lesere med [amsreader-firmware](https://github.com/UtilitechAS/a
 
 ## Oppdateringer
 
-Hver release inneholder `latest.json` (signert med ed25519) og `strom-app-x.y.z.json.gz` (programfilene). Appen godtar bare pakker signert med nøkkelen som er bygget inn i [`app/updater.js`](app/updater.js).
+Mappen [`oppdateringer/`](oppdateringer/) inneholder `latest.json` (signert med ed25519) og `strom-app-x.y.z.json.gz` (programfilene). Installerte apper sjekker den hver time og godtar bare pakker signert med nøkkelen som er bygget inn i [`app/updater.js`](app/updater.js).
+
+Ny versjon: øk `version` i `package.json`, og kjør
 
 ```
-node tools/publiser.js <privat-nøkkel.pem> release/
+node tools/publiser.js <privat-nøkkel.pem> oppdateringer/
 ```
+
+Eldre `strom-app-*.json.gz` kan slettes fra mappen.
 
 ## Kilder og lisenser
 

@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Automatiske oppdateringer fra GitHub Releases.
+ * Automatiske oppdateringer fra GitHub (mappen oppdateringer/ i repoet).
  *
  * Hver versjon publiseres med:
  *   latest.json                 – manifest: versjon, filnavn, SHA-256 og ed25519-signatur
@@ -60,18 +60,18 @@ function rmrf(p) { try { fs.rmSync(p, { recursive: true, force: true }); } catch
 async function checkAndInstall({ currentVersion, electronVersion, appRoot, log }) {
   if (REPO.startsWith('EIER/') || PUBLIC_KEY.includes('NOKKEL')) return { status: 'av' };
   const testBase = process.env.STROM_UPDATE_BASE; // brukes bare til testing
-  const base = testBase || `https://github.com/${REPO}/releases/latest/download`;
+  const base = testBase || `https://raw.githubusercontent.com/${REPO}/main/oppdateringer`;
   const raw = await fetchBuf(`${base}/latest.json`, 64 * 1024);
   if (!raw) return { status: 'nyeste' };
   const m = JSON.parse(raw.toString('utf8'));
   if (!verifyManifest(m)) throw new Error('Ugyldig signatur på oppdateringen – ignorert');
   if (cmpVersion(m.versjon, currentVersion) <= 0) return { status: 'nyeste', versjon: m.versjon };
-  const side = `https://github.com/${REPO}/releases/latest`;
+  const side = `https://github.com/${REPO}#installere`;
   if (m.min_electron && cmpVersion(electronVersion, m.min_electron) < 0) {
     return { status: 'krever-installasjon', versjon: m.versjon, side };
   }
 
-  const gz = await fetchBuf(testBase ? `${testBase}/${m.fil}` : `https://github.com/${REPO}/releases/download/v${m.versjon}/${m.fil}`, 20 * 1024 * 1024);
+  const gz = await fetchBuf(`${base}/${m.fil}`, 20 * 1024 * 1024);
   if (!gz) throw new Error('Fant ikke oppdateringsfilen');
   if (gz.length !== Number(m.storrelse)) throw new Error('Feil størrelse på oppdateringen');
   const sha = crypto.createHash('sha256').update(gz).digest('hex');
