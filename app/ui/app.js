@@ -7,7 +7,24 @@ const MND = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'augus
 const COLORS = { green: '#4fc27f', yellow: '#e9b649', red: '#ec6b57', blue: '#7aa7ff', muted: '#98a0ad', line: '#2e333d', faint: '#6b7280' };
 
 let S = null;
-let view = 'today';
+let dayIdx = 0;
+let weekMode = false;
+const wdFmt = new Intl.DateTimeFormat('nb-NO', { timeZone: 'UTC', weekday: 'short' });
+const MND3 = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
+function weekDays() {
+  if (S && S.week && S.week.length) return S.week;
+  return S && S.todaySeries ? [{ date: S.today, prognose: false, series: S.todaySeries }] : [];
+}
+function curDay() { const w = weekDays(); if (dayIdx >= w.length) dayIdx = 0; return w[dayIdx]; }
+/** "I dag 3. nov", "I morgen 4. nov", "Ons 5. nov" */
+function dagNavn(date, idx, kort = false) {
+  const [y, m, d] = date.split('-').map(Number);
+  const dato = `${d}. ${MND3[m - 1]}`;
+  if (idx === 0) return kort ? 'I dag' : `I dag ${dato}`;
+  if (idx === 1) return kort ? 'I morgen' : `I morgen ${dato}`;
+  const wd = wdFmt.format(new Date(Date.UTC(y, m - 1, d))).replace('.', '');
+  return kort ? `${wd[0].toUpperCase()}${wd.slice(1)} ${d}.` : `${wd[0].toUpperCase()}${wd.slice(1)} ${dato}`;
+}
 let hoverIdx = null;
 window.stromState = () => S;
 window.stromRender = () => { if (S && S.todaySeries) renderUsage(); };
@@ -70,7 +87,6 @@ function render() {
   if (q) parts.push(`ny pris kl. ${hm(q.e)}`);
   if (S.selskap) parts.push(S.selskap.replace(/ AS$/, ''));
   if (S.kilde) parts.push(S.kilde);
-  parts.push(S.ordning === 'norgespris' ? 'Norgespris' : 'spot + strømstøtte');
   parts.push(`v${S.version}`);
   st.textContent = S.error ? S.error : parts.join(' · ');
   st.classList.toggle('err', !!S.error);
@@ -148,24 +164,33 @@ function renderNext() {
 }
 
 function renderChartHeader() {
-  const hasT = S.tomorrowSeries && S.tomorrowSeries.length > 0;
-  if (!hasT && view === 'tomorrow') view = 'today';
-  $('tab-today').classList.toggle('active', view === 'today');
-  $('tab-tomorrow').classList.toggle('active', view === 'tomorrow');
-  $('tab-tomorrow').disabled = !hasT;
-  $('tomorrow-hint').textContent = hasT ? '' : 'i morgen fra ca. kl. 13';
+  const days = weekDays();
+  const day = curDay();
+  $('btn-week').classList.toggle('active', weekMode);
+  $('day-prev').disabled = weekMode || dayIdx === 0;
+  $('day-next').disabled = weekMode || dayIdx >= days.length - 1;
+  $('day-label').textContent = weekMode ? `Neste ${days.length} dager` : dagNavn(day.date, dayIdx);
+  $('day-badge').hidden = weekMode || !day.prognose;
 
-  const series = view === 'today' ? S.todaySeries : S.tomorrowSeries;
-  if (series.length && S.norgespris) {
-    const altAvg = avgOf(series, 'altTotal'); const avg = avgOf(series, 'total');
-    $('day-summary').innerHTML = `<span class="legend bars"></span>Spot m/støtte ${kr(altAvg)} · <span class="legend line"></span>Norgespris ${kr(avg)} · ${altAvg >= avg ? `sparer ${kr(altAvg - avg)}` : `spot ${kr(avg - altAvg)} lavere`}`;
-  } else if (series.length) {
-    const avg = series.reduce((a, c) => a + c.total, 0) / series.length;
-    const mn = series.reduce((a, c) => (c.total < a.total ? c : a));
-    const mx = series.reduce((a, c) => (c.total > a.total ? c : a));
-    $('day-summary').textContent = `Snitt ${kr(avg)} · billigst ${kr(mn.total)} kl. ${hh(mn.t)} · dyrest ${kr(mx.total)} kl. ${hh(mx.t)}`;
+  if (weekMode) {
+    const kjente = days.filter((d) => !d.prognose).length;
+    const forste = days[kjente];
+    $('day-summary').textContent = forste ? `Fra ${dagNavn(forste.date, kjente, true).toLowerCase()} er prisene anslag. Trykk på en dag.` : 'Trykk på en dag for detaljer.';
   } else {
-    $('day-summary').textContent = '';
+    const series = day.series;
+    if (series.length && S.norgespris) {
+      const altAvg = avgOf(series, 'altTotal'); const avg = avgOf(series, 'total');
+      $('day-summary').innerHTML = `<span class="legend bars"></span>Spot m/støtte ${day.prognose ? '~' : ''}${kr(altAvg)} · <span class="legend line"></span>Norgespris ${kr(avg)} · ${altAvg >= avg ? `sparer ${day.prognose ? '~' : ''}${kr(altAvg - avg)}` : `spot ${kr(avg - altAvg)} lavere`}`;
+    } else if (series.length) {
+      const avg = series.reduce((a, c) => a + c.total, 0) / series.length;
+      const mn = series.reduce((a, c) => (c.total < a.total ? c : a));
+      const mx = series.reduce((a, c) => (c.total > a.total ? c : a));
+      const p = day.prognose ? '~' : '';
+      $('day-summary').textContent = `Snitt ${p}${kr(avg)} · billigst ${p}${kr(mn.total)} kl. ${hh(mn.t)} · dyrest ${p}${kr(mx.total)} kl. ${hh(mx.t)}`;
+    } else {
+      $('day-summary').textContent = '';
+    }
+    if (day.prognose && !S.norgespris) $('day-summary').textContent += dayIdx === 1 ? ' · ekte priser kommer ca. kl. 13' : ' · anslag, kan avvike mye';
   }
   const w = cheapestWindow(futureSeries(), 3);
   $('cheap').classList.toggle('neutral', !!(S.norgespris && isFlat(S.todaySeries)));
@@ -210,7 +235,10 @@ let chartGeom = null;
 function drawChart() {
   const canvas = $('chart');
   const { ctx, w, h } = setupCanvas(canvas);
-  const series = view === 'today' ? S.todaySeries : S.tomorrowSeries;
+  if (weekMode) { drawWeek(); return; }
+  const day = curDay();
+  const series = day ? day.series : [];
+  const prog = day && day.prognose;
   const fs = parseFloat(getComputedStyle(document.documentElement).fontSize);
   ctx.font = `${Math.round(fs * 0.7)}px "Segoe UI", system-ui, sans-serif`;
   if (!series.length) {
@@ -249,12 +277,16 @@ function drawChart() {
     const bx = plotX + i * bw + gap / 2;
     const by = top + plotH - bh;
     const lv = level(val(x), t);
-    const past = view === 'today' && x.t < nowH;
-    const isNow = view === 'today' && x.t === nowH;
-    ctx.globalAlpha = (past ? 0.32 : (hoverIdx === null || hoverIdx === i ? 1 : 0.75)) * (np ? 0.55 : 1);
+    const past = dayIdx === 0 && x.t < nowH;
+    const isNow = dayIdx === 0 && x.t === nowH;
+    ctx.globalAlpha = (past ? 0.32 : (hoverIdx === null || hoverIdx === i ? 1 : 0.75)) * (np ? 0.55 : 1) * (prog ? 0.55 : 1);
     ctx.fillStyle = COLORS[lv];
     roundRectTop(ctx, bx, by, bw - gap, bh, 3);
     ctx.fill();
+    if (prog) {
+      ctx.globalAlpha = 0.9; ctx.setLineDash([3, 3]); ctx.strokeStyle = COLORS[lv]; ctx.lineWidth = 1;
+      roundRectTop(ctx, bx + 0.5, by + 0.5, bw - gap - 1, bh - 0.5, 3); ctx.stroke(); ctx.setLineDash([]);
+    }
     if (isNow) {
       ctx.globalAlpha = 1;
       ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
@@ -288,7 +320,55 @@ function drawChart() {
     const hr = Number(hh(x.t));
     if (hr % every === 0) ctx.fillText(String(hr).padStart(2, '0'), plotX + i * bw + bw / 2, h - 2);
   });
-  chartGeom = { plotX, bw, n, series, top, plotH, yMax };
+  chartGeom = { plotX, bw, n, series, top, plotH, yMax, prog };
+}
+
+/** Ukeoversikt: én søyle per dag (snitt), strek for laveste–høyeste time. */
+function drawWeek() {
+  const canvas = $('chart');
+  const { ctx, w, h } = setupCanvas(canvas);
+  const fs = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  ctx.font = `${Math.round(fs * 0.7)}px "Segoe UI", system-ui, sans-serif`;
+  const np = !!S.norgespris;
+  const days = weekDays().filter((d) => d.series.length);
+  const val = (x) => (np ? x.altTotal : x.total);
+  const stats = days.map((d) => {
+    const v = d.series.map(val);
+    return { d, avg: v.reduce((a, c) => a + c, 0) / v.length, min: Math.min(...v), max: Math.max(...v), np: avgOf(d.series, 'total') };
+  });
+  const max = Math.max(...stats.map((s) => Math.max(s.max, s.np)));
+  const t = terciles(stats.map((s) => ({ total: s.avg })));
+  const axisW = Math.round(fs * 2.2); const labH = Math.round(fs * 1.3);
+  const plotX = axisW; const plotW = w - axisW; const top = 4; const plotH = h - labH - 6;
+  const stepKr = max / 100 > 2 ? 0.5 : 0.25;
+  const yMax = Math.ceil((max / 100) / stepKr) * stepKr * 100 || 100;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let v = 0; v <= yMax + 0.01; v += stepKr * 100) {
+    const y = top + plotH - (v / yMax) * plotH;
+    ctx.strokeStyle = COLORS.line; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(plotX, Math.round(y) + 0.5); ctx.lineTo(w, Math.round(y) + 0.5); ctx.stroke();
+    ctx.fillStyle = COLORS.faint; ctx.fillText(kr(v, v % 100 === 0 ? 0 : 2), axisW - 6, y);
+  }
+  const n = stats.length; const bw = plotW / n; const gap = Math.max(4, bw * 0.28);
+  const Y = (v) => top + plotH - (v / yMax) * plotH;
+  stats.forEach((s, i) => {
+    const bx = plotX + i * bw + gap / 2; const bwi = bw - gap;
+    const lv = level(s.avg, t);
+    const a = (s.d.prognose ? 0.5 : 1) * (np ? 0.6 : 1) * (hoverIdx === null || hoverIdx === i ? 1 : 0.75);
+    ctx.globalAlpha = a; ctx.fillStyle = COLORS[lv];
+    roundRectTop(ctx, bx, Y(s.avg), bwi, Y(0) - Y(s.avg), 4); ctx.fill();
+    if (s.d.prognose) { ctx.globalAlpha = 0.9; ctx.setLineDash([3, 3]); ctx.strokeStyle = COLORS[lv]; roundRectTop(ctx, bx + 0.5, Y(s.avg) + 0.5, bwi - 1, Y(0) - Y(s.avg) - 0.5, 4); ctx.stroke(); ctx.setLineDash([]); }
+    // laveste–høyeste
+    ctx.globalAlpha = 0.85; ctx.strokeStyle = '#eef0f4'; ctx.lineWidth = 1.2;
+    const cx = bx + bwi / 2;
+    ctx.beginPath(); ctx.moveTo(cx, Y(s.min)); ctx.lineTo(cx, Y(s.max)); ctx.moveTo(cx - 4, Y(s.max)); ctx.lineTo(cx + 4, Y(s.max)); ctx.moveTo(cx - 4, Y(s.min)); ctx.lineTo(cx + 4, Y(s.min)); ctx.stroke();
+    if (np) { ctx.globalAlpha = 1; ctx.strokeStyle = COLORS.blue; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(bx, Y(s.np)); ctx.lineTo(bx + bwi, Y(s.np)); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = s.d.prognose ? COLORS.faint : COLORS.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    const idx = weekDays().indexOf(s.d);
+    ctx.fillText(dagNavn(s.d.date, idx, true), cx, h - 3);
+  });
+  chartGeom = { week: true, plotX, bw, n, stats };
 }
 
 function onChartMove(e) {
@@ -299,17 +379,31 @@ function onChartMove(e) {
   const tip = $('tip');
   if (i < 0 || i >= chartGeom.n) { tip.hidden = true; if (hoverIdx !== null) { hoverIdx = null; drawChart(); } return; }
   if (i !== hoverIdx) { hoverIdx = i; drawChart(); }
+  if (chartGeom.week) {
+    const s = chartGeom.stats[i];
+    const idx = weekDays().indexOf(s.d);
+    const p = s.d.prognose ? '~' : '';
+    let h2 = `<b>${dagNavn(s.d.date, idx)}</b>${s.d.prognose ? ' <span class="anslag">Anslag</span>' : ''}<br>`;
+    h2 += S.norgespris
+      ? `<span style="color:${COLORS.blue}">Norgespris ${kr(s.np)}</span><br>Spot m/støtte snitt ${p}${kr(s.avg)}<br>Laveste ${p}${kr(s.min)} · høyeste ${p}${kr(s.max)}`
+      : `Snitt ${p}${kr(s.avg)} kr/kWh<br>Laveste ${p}${kr(s.min)} · høyeste ${p}${kr(s.max)}`;
+    tip.innerHTML = h2; tip.hidden = false;
+    const tw1 = tip.offsetWidth;
+    tip.style.left = `${Math.max(0, Math.min(r.width - tw1, chartGeom.plotX + i * chartGeom.bw + chartGeom.bw / 2 - tw1 / 2))}px`;
+    tip.style.top = '0px';
+    return;
+  }
   const d = chartGeom.series[i];
   if (S.norgespris) {
     const diff = d.altTotal - d.total;
-    tip.innerHTML = `<b>kl. ${hh(d.t)}–${hh(d.t + HOUR)}</b><br><span style="color:${COLORS.blue}">Norgespris ${kr(d.total)}</span><br>Spotpris m/støtte ${kr(d.altTotal)}<br><span class="${diff >= 0 ? 'green' : 'yellow'}">${diff >= 0 ? 'Sparer' : 'Spot billigere med'} ${kr(Math.abs(diff))}</span>`;
+    tip.innerHTML = `<b>kl. ${hh(d.t)}–${hh(d.t + HOUR)}</b>${chartGeom.prog ? ' <span class="anslag">Anslag</span>' : ''}<br><span style="color:${COLORS.blue}">Norgespris ${kr(d.total)}</span><br>Spotpris m/støtte ${chartGeom.prog ? '~' : ''}${kr(d.altTotal)}<br><span class="${diff >= 0 ? 'green' : 'yellow'}">${diff >= 0 ? 'Sparer' : 'Spot billigere med'} ${kr(Math.abs(diff))}</span>`;
     tip.hidden = false;
     const tw0 = tip.offsetWidth;
     tip.style.left = `${Math.max(0, Math.min(r.width - tw0, chartGeom.plotX + i * chartGeom.bw + chartGeom.bw / 2 - tw0 / 2))}px`;
     tip.style.top = '0px';
     return;
   }
-  let html = `<b>${kr(d.total)} kr/kWh</b><br>kl. ${hh(d.t)}–${hh(d.t + HOUR)}<br>`;
+  let html = `<b>${chartGeom.prog ? '~' : ''}${kr(d.total)} kr/kWh</b>${chartGeom.prog ? ' <span class="anslag">Anslag</span>' : ''}<br>kl. ${hh(d.t)}–${hh(d.t + HOUR)}<br>`;
   html += `${S.ordning === 'norgespris' ? 'Norgespris' : 'Strøm'} ${kr(d.kraft)} · nett ${kr(d.nett)}`;
   if (d.stotte > 0) html += `<br><span class="green">Støtte −${kr(d.stotte)}</span>`;
   tip.innerHTML = html;
@@ -462,8 +556,14 @@ $('btn-refresh').addEventListener('click', () => window.strom.refresh());
 $('btn-menu').addEventListener('click', () => window.strom.menu());
 $('btn-elhub').addEventListener('click', () => window.strom.openElhub());
 $('btn-folder').addEventListener('click', () => window.strom.openForbruk());
-$('tab-today').addEventListener('click', () => { view = 'today'; render(); });
-$('tab-tomorrow').addEventListener('click', () => { if (S && S.tomorrowSeries && S.tomorrowSeries.length) { view = 'tomorrow'; render(); } });
+$('day-prev').addEventListener('click', () => { if (dayIdx > 0) { dayIdx--; hoverIdx = null; render(); } });
+$('day-next').addEventListener('click', () => { if (dayIdx < weekDays().length - 1) { dayIdx++; hoverIdx = null; render(); } });
+$('btn-week').addEventListener('click', () => { weekMode = !weekMode; hoverIdx = null; $('tip').hidden = true; render(); });
+$('chart').addEventListener('click', () => {
+  if (weekMode && chartGeom && chartGeom.week && hoverIdx !== null) {
+    dayIdx = weekDays().indexOf(chartGeom.stats[hoverIdx].d); weekMode = false; hoverIdx = null; $('tip').hidden = true; render();
+  }
+});
 $('chart').addEventListener('mousemove', onChartMove);
 $('chart').addEventListener('mouseleave', onChartLeave);
 window.addEventListener('contextmenu', (e) => { e.preventDefault(); window.strom.menu(); });

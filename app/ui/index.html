@@ -33,11 +33,15 @@
 
   <section class="chart-card">
     <div class="card-head">
-      <div class="tabs" role="tablist">
-        <button class="tab active" id="tab-today" role="tab">I dag</button>
-        <button class="tab" id="tab-tomorrow" role="tab">I morgen</button>
+      <div class="daynav">
+        <button class="icon-btn" id="day-prev" aria-label="Forrige dag"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <span class="day-label" id="day-label">I dag</span>
+        <button class="icon-btn" id="day-next" aria-label="Neste dag"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
       </div>
-      <span class="muted small" id="tomorrow-hint"></span>
+      <div class="head-right">
+        <span class="anslag" id="day-badge" hidden>Anslag</span>
+        <div class="tabs"><button class="tab" id="btn-week">Uke</button></div>
+      </div>
     </div>
     <div class="chart-wrap" id="chart-wrap">
       <canvas id="chart"></canvas>

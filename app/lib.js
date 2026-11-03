@@ -638,6 +638,52 @@ function dayStats(cfg, cons, prices, dateStr) {
   return { kwh, kr, toppKw: cons.get(peak), toppKl: osloParts(peak).h, hours };
 }
 
+/**
+ * Enkel prisprognose for dagene etter de kjente prisene.
+ * hist: [{date, hours: Map(timeKey -> spot eks. mva kr)}] for de siste dagene (eldst først).
+ * Returnerer Map(timeKey -> anslått spot) for datoene i targets.
+ *   - døgnmønster: median av (time / døgnsnitt) siste 7 dager
+ *   - ukedag: forholdet mellom ukedagens snitt og totalsnittet siste 14 dager
+ *   - nivå: 60 % siste kjente dag + 40 % snittet siste 14 dager
+ */
+function forecastSpot(hist, targets) {
+  const days = hist.filter((d) => d.hours.size >= 20).map((d) => {
+    const byH = new Array(24).fill(null).map(() => []);
+    for (const [t, v] of d.hours) byH[osloParts(t).h].push(v);
+    const vals = byH.map((a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null));
+    const ok = vals.filter((v) => v !== null);
+    const avg = ok.reduce((x, y) => x + y, 0) / ok.length;
+    const [y, m, dd] = d.date.split('-').map(Number);
+    return { date: d.date, vals, avg, wd: osloParts(osloToUtc(y, m, dd, 12)).wd };
+  });
+  const out = new Map();
+  if (days.length < 3) return out;
+  const median = (a) => { const s = [...a].sort((x, y) => x - y); const n = s.length; return n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2; };
+  const recent = days.slice(-7);
+  const profile = Array.from({ length: 24 }, (_, h) => {
+    const r = recent.filter((d) => d.vals[h] !== null && d.avg > 0.005).map((d) => d.vals[h] / d.avg);
+    return r.length ? median(r) : 1;
+  });
+  const span = days.slice(-14);
+  const allAvg = span.reduce((x, d) => x + d.avg, 0) / span.length;
+  const wdf = Array.from({ length: 7 }, (_, w) => {
+    const a = span.filter((d) => d.wd === w);
+    return a.length && allAvg > 0.005 ? (a.reduce((x, d) => x + d.avg, 0) / a.length) / allAvg : 1;
+  });
+  const level = 0.6 * days[days.length - 1].avg + 0.4 * allAvg;
+  for (const date of targets) {
+    const [y, m, d] = date.split('-').map(Number);
+    const wd = osloParts(osloToUtc(y, m, d, 12)).wd;
+    const dayAvg = level * Math.min(1.4, Math.max(0.6, wdf[wd]));
+    for (let h = 0; h < 24; h++) {
+      const t = osloToUtc(y, m, d, h, 0);
+      if (osloParts(t).h !== h) continue; // sommertid
+      out.set(t, Math.max(0, dayAvg * profile[h]));
+    }
+  }
+  return out;
+}
+
 /** Beste sammenhengende vindu på n timer fra listen [{t, total}]. */
 function cheapestWindow(series, n) {
   if (series.length < n) return null;
@@ -654,5 +700,5 @@ module.exports = {
   HOUR, DEFAULT_CONFIG, osloParts, osloToUtc, hourKey, dateAdd, daysInMonth,
   loadConfig, saveConfig, migrateConfig, fetchDayPrices, getSourceError: () => lastSourceError, activeTariff, tariffSummary, mvaFactor, isHoliday, parseEntries, hourlyAvg,
   nettOre, beregn, kapasitet, parseElhubText, parseElhubFile, loadConsumption,
-  consumptionSignature, importFromDownloads, monthStats, dayStats, cheapestWindow,
+  consumptionSignature, importFromDownloads, monthStats, dayStats, cheapestWindow, forecastSpot,
 };

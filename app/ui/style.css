@@ -273,7 +273,7 @@ select { font: inherit; font-size: 0.85rem; color: var(--fg); background: var(--
 .live-err { color: var(--yellow); }
 .live-err:empty { display: none; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(79,194,127,.55); } 70% { box-shadow: 0 0 0 7px rgba(79,194,127,0); } 100% { box-shadow: 0 0 0 0 rgba(79,194,127,0); } }
-@media (max-width: 859px) and (max-height: 880px) { .chart-card { min-height: 9.4rem; } #app { gap: 0.6rem; } }
+@media (max-width: 859px) and (max-height: 880px) { .chart-card { min-height: 8.6rem; } #app { gap: 0.6rem; } .chart-card .card-head { margin-bottom: 0.3rem; } .chart-wrap { min-height: 6.6rem; } }
 
 /* ---- HAN-dialog ---- */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 10; }
@@ -301,3 +301,13 @@ select { font: inherit; font-size: 0.85rem; color: var(--fg); background: var(--
 .btns { flex-wrap: wrap; }
 .lnk { color: var(--blue); text-decoration: none; }
 .lnk:hover { text-decoration: underline; }
+
+/* ---- Dagvelger og uke ---- */
+.daynav { display: flex; align-items: center; gap: 0.15rem; min-width: 0; }
+.daynav .icon-btn { width: 1.45rem; height: 1.45rem; }
+.daynav .icon-btn:disabled { opacity: 0.3; cursor: default; }
+.daynav .icon-btn:disabled:hover { background: transparent; }
+.day-label { font-size: 0.9rem; font-weight: 600; white-space: nowrap; min-width: 6.8rem; text-align: center; }
+.head-right { display: flex; align-items: center; gap: 0.4rem; }
+.anslag { font-size: 0.68rem; font-weight: 600; color: var(--yellow); background: rgba(233,182,73,.14); border-radius: 999px; padding: 0.1rem 0.45rem; }
+.anslag[hidden] { display: none; }

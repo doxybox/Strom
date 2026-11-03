@@ -1,7 +1,7 @@
 {
   "name": "strom",
   "productName": "Strøm",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "description": "Strømpris, forbruk og kostnad på skrivebordet",
   "main": "app/main.js",
   "private": true,

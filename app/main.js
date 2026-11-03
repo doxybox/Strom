@@ -481,6 +481,20 @@ function seriesFor(entries) {
   return [...hrs].sort((a, b) => a[0] - b[0]).map(([t, p]) => ({ t, spot: p, ...lib.beregn(cfg, t, p), altTotal: lib.beregn(alt, t, p).total }));
 }
 
+let lastPrune = 0;
+/** Sletter prisfiler eldre enn 70 dager. */
+function pruneCache() {
+  if (Date.now() - lastPrune < 86400000) return;
+  lastPrune = Date.now();
+  const cutoff = lib.dateAdd(lib.osloParts(Date.now()).date, -70);
+  try {
+    for (const n of fs.readdirSync(CACHE_DIR)) {
+      const m = n.match(/^(\d{4}-\d{2}-\d{2})_NO\d/);
+      if (m && m[1] < cutoff) fs.rmSync(path.join(CACHE_DIR, n), { force: true });
+    }
+  } catch (_) { /* ignorer */ }
+}
+
 async function refresh(force = false) {
   if (busy) return;
   busy = true;
@@ -498,6 +512,27 @@ async function refresh(force = false) {
         tomorrowEntries = lib.parseEntries(await lib.fetchDayPrices(lib.dateAdd(today, 1), zone, CACHE_DIR));
       } catch (e) { log(`Morgendagens priser: ${e.message}`); }
     }
+    // Uke: kjente priser + anslag ut fra de siste 14 dagene
+    const hist = [];
+    for (let i = 14; i >= 1; i--) {
+      const d = lib.dateAdd(today, -i);
+      try { hist.push({ date: d, hours: lib.hourlyAvg(lib.parseEntries(await lib.fetchDayPrices(d, zone, CACHE_DIR))) }); } catch (_) { /* hopp over */ }
+    }
+    hist.push({ date: today, hours: lib.hourlyAvg(todayEntries) });
+    if (tomorrowEntries.length) hist.push({ date: lib.dateAdd(today, 1), hours: lib.hourlyAvg(tomorrowEntries) });
+    const known = tomorrowEntries.length ? 2 : 1;
+    const targets = []; for (let i = known; i < 7; i++) targets.push(lib.dateAdd(today, i));
+    const fc = lib.forecastSpot(hist, targets);
+    const alt = altCfg();
+    const week = [{ date: today, prognose: false, series: seriesFor(todayEntries) }];
+    if (tomorrowEntries.length) week.push({ date: lib.dateAdd(today, 1), prognose: false, series: seriesFor(tomorrowEntries) });
+    for (const d of targets) {
+      const series = [...fc].filter(([t]) => lib.osloParts(t).date === d).sort((a, b) => a[0] - b[0])
+        .map(([t, p]) => ({ t, spot: p, ...lib.beregn(cfg, t, p), altTotal: lib.beregn(alt, t, p).total }));
+      if (series.length) week.push({ date: d, prognose: true, series });
+    }
+    pruneCache();
+
     const { cons, hourly, files, errors } = lib.loadConsumption(FORBRUK_DIR);
     for (const [k, v] of hanHours) if (!cons.has(k)) cons.set(k, v); // Elhub-tall går foran
     const prices = lib.hourlyAvg(todayEntries);
@@ -537,6 +572,7 @@ async function refresh(force = false) {
       trinn: cfg.__selskap && cfg.nettselskap_id !== 'egen' ? (lib.tariffSummary(cfg, cfg.__selskap, today) || {}).trinn || [] : [],
       todaySeries: seriesFor(todayEntries),
       tomorrowSeries: seriesFor(tomorrowEntries),
+      week,
       hasConsumption: cons.size > 0,
       hourly,
       files,

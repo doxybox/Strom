@@ -1,9 +1,9 @@
 {
-  "versjon": "2.7.0",
-  "fil": "strom-app-2.7.0.json.gz",
-  "sha256": "fcb1eb518dac049a073a6e3ad03662f6ecc45d7ddb9c1f7552040362721e1bec",
-  "storrelse": 226872,
+  "versjon": "2.7.1",
+  "fil": "strom-app-2.7.1.json.gz",
+  "sha256": "22be97e0c38e26018fe2334a5a1e5326bfdc5d66147fdb766682f5cc35eaa5e9",
+  "storrelse": 231682,
   "min_electron": "44.7.2",
-  "publisert": "2026-11-03T22:06:44.252Z",
-  "signatur": "6pNYbxOPblvb4xmqGuisbXe0863rkB8Z1XywvtyY1OIVQ8nxBcp6cBC7cNVIbQN5np7X7G8MoNjNQtpcIMABCA=="
+  "publisert": "2026-11-03T22:20:34.094Z",
+  "signatur": "y4MRSTL9EnOp3nCXnoaOEq+DoDtec1zjB/qYwvNQ1Q2y+aD/1uXRBBuBaQKLS5IfJu3wVUDZbVVFVdYyDlptBg=="
 }
