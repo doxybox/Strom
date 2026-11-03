@@ -38,4 +38,5 @@ Med en HAN-leser på strømmåleren ser du forbruket ditt live, uten å laste ne
 
 - Prisene er beregninger og kan avvike litt fra fakturaen. Fakturaen gjelder alltid.
 - Alt lagres på din egen PC.
-- Spotpriser fra Nord Pool. Nettleie fra [fri-nettleie](https://kraftsystemet.no/fri-nettleie/) (CC BY 4.0).
+- Spotprisen er den samme for alle strømselskaper i ditt prisområde. Påslag og månedsbeløp fra din avtale legger du inn selv.
+- Nettleie fra [fri-nettleie](https://kraftsystemet.no/fri-nettleie/) (CC BY 4.0).

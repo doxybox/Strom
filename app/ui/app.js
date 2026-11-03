@@ -86,7 +86,6 @@ function render() {
   const parts = [`Oppdatert ${hm(S.lastFetch)}`];
   if (q) parts.push(`ny pris kl. ${hm(q.e)}`);
   if (S.selskap) parts.push(S.selskap.replace(/ AS$/, ''));
-  if (S.kilde) parts.push(S.kilde);
   parts.push(`v${S.version}`);
   st.textContent = S.error ? S.error : parts.join(' · ');
   st.classList.toggle('err', !!S.error);
@@ -123,7 +122,9 @@ function renderNow() {
     // Samme tall som strømleverandørens app: bare kraftprisen, timesnitt, inkl. mva, uten strømstøtte
     const nowH = Math.floor(Date.now() / HOUR) * HOUR;
     const hr = (S.todaySeries || []).find((x) => x.t === nowH);
-    if (hr) h += `<br><span class="vibb">Som i Vibb (kl. ${hh(hr.t)}–${hh(hr.t + HOUR)}): Norgespris ${num(hr.kraft, 2)} øre · spotpris ${num(hr.spot * 100 * (S.mva || 1.25), 2)} øre</span>`;
+    const lev = String(S.leverandor || '').replace(/\+$/, '').trim();
+    const hvor = lev && lev.toLowerCase() !== 'annen' ? `Som i ${lev}-appen` : 'Som i strømselskapets app';
+    if (hr) h += `<br><span class="vibb">${hvor} (kl. ${hh(hr.t)}–${hh(hr.t + HOUR)}): Norgespris ${num(hr.kraft, 2)} øre · spotpris ${num(hr.spot * 100 * (S.mva || 1.25), 2)} øre</span>`;
     $('now-breakdown').innerHTML = `${h}<br>Totalpris inkl. nettleie, avgifter og mva`;
     return;
   }
