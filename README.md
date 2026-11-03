@@ -1,33 +1,41 @@
 # Strøm ⚡
 
-Strømpris, nettleie, forbruk og kostnad på Windows-skrivebordet.
+Se hva strømmen koster akkurat nå – og hva du faktisk bruker – rett på Windows-skrivebordet.
 
-**[⬇ Last ned Strøm 2.7.0 for Windows](https://github.com/doxybox/strom/raw/main/last-ned/Strom-Setup-2.7.0.exe)** (`Strom-Setup-2.7.0.exe`, 0,6 MB)
+**[⬇ Last ned Strøm for Windows](https://github.com/doxybox/strom/raw/main/last-ned/Strom-Setup-2.7.0.exe)**
 
-## Hva den gjør
+## Hva Strøm gjør
 
-- **Strømprisen nå** – spotpris fra Nord Pool for ditt prisområde, med nettleie, avgifter og strømstøtte – eller Norgespris
-- **Nettleie for 72 nettselskaper** – riktig energiledd for time, helg, helligdag og sesong, og kapasitetstrinn ([fri-nettleie](https://kraftsystemet.no/fri-nettleie/))
-- **Time for time** i dag og i morgen, med de billigste timene fremover
-- **Forbruk og kostnad** – live fra HAN-leser på hjemmenettet (finnes automatisk), eller fra Elhub-eksport
-- **Varsler** når strømmen er billig, når morgendagens priser er klare, og før du havner i et dyrere kapasitetstrinn
-- **Oppdaterer seg selv** – nye versjoner er signert og installeres automatisk
+- **Viser strømprisen akkurat nå** – med nettleie, avgifter og strømstøtte inkludert, slik du faktisk betaler den. Har du Norgespris, ser du hva du sparer mot spotpris.
+- **Kjenner nettleien din** – velg nettselskapet ditt blant 72 norske nettselskaper, så regnes riktig nettleie for hver time, helg og helligdag.
+- **Pris time for time** – for i dag og i morgen, med fargekoder og de billigste timene fremover, så du vet når det lønner seg å vaske, lade bilen eller kjøre oppvaskmaskinen.
+- **Viser forbruket ditt** – live fra en HAN-leser på strømmåleren, som Strøm finner av seg selv på hjemmenettet. Uten HAN-leser kan du laste ned forbruket fra Elhub.
+- **Holder kapasitetstrinnet nede** – du ser hvor nær du er neste trinn, og får varsel før et høyt forbruk gjør nettleien dyrere.
+- **Månedens kostnad** – hittil og estimat for hele måneden.
+- **Varsler** når strømmen er billig og når morgendagens priser er klare.
+- **Lite eller stort vindu** – som en liten widget i hjørnet, eller i fullskjerm.
+- **Oppdaterer seg selv** – nye versjoner installeres automatisk.
 
-## Installere
+## Slik installerer du
 
-1. Last ned `Strom-Setup-2.7.0.exe` fra lenken øverst (eller mappen [`last-ned/`](last-ned/))
-2. Windows kan si «Windows beskyttet PC-en din» (programmet er ikke kodesignert): **Mer informasjon → Kjør likevel**
-3. Følg veiviseren. Kjøremiljøet (Electron, ~150 MB) lastes ned under installasjonen og kontrolleres med SHA-256.
+1. Trykk **Last ned Strøm for Windows** over.
+2. Åpne filen du lastet ned (`Strom-Setup-2.7.0.exe`).
+3. Sier Windows «Windows beskyttet PC-en din», trykker du **Mer informasjon** og så **Kjør likevel**.
+4. Følg veiviseren og trykk **Installer**. PC-en må være koblet til internett, og det tar et par minutter.
+5. Første gang velger du **prisområde**, **nettselskap** og **strømavtale**. Ferdig!
 
-Krever Windows 10/11 (64-bit). Ingen administratortilgang.
+Fungerer på Windows 10 og 11. Du trenger ikke administratortilgang.
 
-## HAN-lesere
+## HAN-leser
 
-Støttet i dag: lesere med [amsreader-firmware](https://github.com/UtilitechAS/amsreader-firmware) (AmsLeser Pow-K, Pow-K+, Pow-U, Pow-P1 og hjemmelagde ESP-lesere). Nye lesertyper legges til som en «driver» i [`app/han.js`](app/han.js).
+Med en HAN-leser på strømmåleren ser du forbruket ditt live, uten å laste ned noe. Strøm finner leseren automatisk når den er koblet til samme wifi som PC-en.
 
-## Kilder og lisenser
+1. Be nettselskapet ditt åpne HAN-porten på måleren (det er gratis).
+2. Kjøp en leser som passer måleren din, for eksempel **Pow-K** (Kamstrup) eller **Pow-U** (Aidon, Kaifa) fra [amsleser.no](https://amsleser.no).
+3. Koble leseren til wifi – Strøm gjør resten.
 
-- Spotpriser: Nord Pool (reserve: hvakosterstrommen.no)
-- Nettleie: [fri-nettleie](https://github.com/kraftsystemet/fri-nettleie), CC BY 4.0
-- Kjøremiljø: [Electron](https://www.electronjs.org/), MIT
-- Prisene er beregninger – fakturaen gjelder alltid.
+## Godt å vite
+
+- Prisene er beregninger og kan avvike litt fra fakturaen. Fakturaen gjelder alltid.
+- Alt lagres på din egen PC.
+- Spotpriser fra Nord Pool. Nettleie fra [fri-nettleie](https://kraftsystemet.no/fri-nettleie/) (CC BY 4.0).
