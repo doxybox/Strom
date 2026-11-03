@@ -3,7 +3,8 @@
  * Lager en signert oppdateringspakke for Strøm.
  *   node tools/publiser.js <privat-nøkkel.pem> <utmappe> [node_modules-mappe]
  * Resultat: <utmappe>/latest.json og <utmappe>/strom-app-<versjon>.json.gz
- * Last dem opp som filer på en GitHub-release med tag v<versjon>.
+ * Publiser begge filene under oppdateringer/ på main-branchen.
+ * Den private nøkkelen brukes bare lokalt og skal aldri legges i repoet.
  */
 'use strict';
 const crypto = require('crypto');
@@ -17,7 +18,9 @@ if (!keyFile || !outDir) { console.error('Bruk: node tools/publiser.js <privat.p
 const root = path.join(__dirname, '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const versjon = pkg.version;
-const MIN_ELECTRON = '44.10.2';
+// App-only updates support the Electron runtime shipped in existing 2.7.x installs.
+// Updating Electron itself requires a full installer, not this code bundle.
+const MIN_ELECTRON = '44.7.2';
 
 const filer = {};
 const EXPECTED_APP_FILES = [
@@ -85,5 +88,4 @@ m.signatur = crypto.sign(null, Buffer.from(signedText(m)), key).toString('base64
 if (!verifyManifest(m)) { console.error('Signaturen stemmer ikke med nøkkelen i app/updater.js!'); process.exit(2); }
 fs.writeFileSync(path.join(outDir, 'latest.json'), JSON.stringify(m, null, 2));
 console.log(`Strøm ${versjon}: ${Object.keys(filer).length} filer, ${(gz.length / 1024).toFixed(0)} KB, signatur OK`);
-
 
